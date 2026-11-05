@@ -1,6 +1,15 @@
-# OpenCode Egress Lab
+<p align="center">
+  <img src="assets/casper.svg" alt="Casper" width="120" height="120">
+</p>
 
-Docker lab dengan:
+<h1 align="center">Casper</h1>
+
+<p align="center">
+  <img src="assets/opencode.png" alt="OpenCode" width="20" height="20" valign="middle">
+  Docker lab untuk <a href="https://opencode.ai">OpenCode</a> di balik Psiphon dan proxy.
+</p>
+
+Casper menyediakan:
 - OpenCode CLI
 - Psiphon community image
 - HTTP proxy

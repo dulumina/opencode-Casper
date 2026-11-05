@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="180" height="180" role="img" aria-label="Casper">
+  <path d="M40 150V85a50 50 0 0 1 100 0v65q-12.5 16-25 0-12.5 16-25 0-12.5 16-25 0-12.5 16-25 0z" fill="#dbeafe" stroke="#4f46e5" stroke-width="8" stroke-linejoin="round"/>
+  <ellipse cx="67" cy="80" rx="8" ry="11" fill="#1e293b"/>
+  <ellipse cx="113" cy="80" rx="8" ry="11" fill="#1e293b"/>
+  <path d="M70 103q20 17 40 0" fill="none" stroke="#1e293b" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="51" cy="100" r="7" fill="#f9a8d4" opacity=".8"/>
+  <circle cx="129" cy="100" r="7" fill="#f9a8d4" opacity=".8"/>
+</svg>
