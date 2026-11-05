@@ -1,0 +1,41 @@
+FROM debian:bookworm-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV HOME=/home/agent
+ENV PATH="/home/agent/.opencode/bin:/usr/local/bin:${PATH}"
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash \
+    ca-certificates \
+    curl \
+    git \
+    jq \
+    unzip \
+    tar \
+    openssh-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Siapkan direktori home sebelum instalasi
+RUN mkdir -p /home/agent
+
+# Install OpenCode
+RUN curl -fsSL https://opencode.ai/install \
+    -o /tmp/opencode-install.sh \
+    && HOME=/home/agent bash /tmp/opencode-install.sh --no-modify-path \
+    && test -x /home/agent/.opencode/bin/opencode \
+    && /home/agent/.opencode/bin/opencode --version \
+    && rm /tmp/opencode-install.sh
+
+# Buat user agent dan atur permission
+RUN useradd --create-home --uid 1000 --shell /bin/bash agent \
+    && mkdir -p \
+    /workspace \
+    /home/agent/.config/opencode \
+    /home/agent/.local/share/opencode \
+    && chown -R agent:agent /workspace /home/agent
+
+WORKDIR /workspace
+
+USER agent
+
+CMD ["opencode"]

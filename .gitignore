@@ -1,0 +1,12 @@
+.env
+config/psiphon/*
+!config/psiphon/.gitkeep
+config/opencode/*
+!config/opencode/.gitkeep
+config/opencode-data/*
+!config/opencode-data/.gitkeep
+data/*
+!data/.gitkeep
+
+# local copies
+backup.egress

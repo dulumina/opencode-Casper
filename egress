@@ -1,0 +1,133 @@
+
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$PROJECT_DIR"
+
+PROXY_CONFIG="config/psiphon/psiphon.config"
+REGION_DIR="config/psiphon/regions"
+BACKUP_CONFIG="config/psiphon/psiphon.config.backup"
+
+set_env_file() {
+    local file="$1"
+    touch .env
+    sed -i '/^EGRESS_ENV_FILE=/d' .env
+    printf 'EGRESS_ENV_FILE=%s\n' "$file" >> .env
+}
+
+wait_ready() {
+    local i
+    echo "Menunggu egress siap..."
+    for i in $(seq 1 45); do
+        docker exec opencode-agent \
+          curl -fsS --max-time 5 https://ipinfo.io/ip >/dev/null 2>&1 && return 0
+        sleep 2
+    done
+    echo "Peringatan: egress belum siap setelah 90 detik." >&2
+    return 1
+}
+
+restart_agent() {
+    docker compose up -d --force-recreate agent
+    wait_ready || true
+}
+
+show_status() {
+    echo "=== Egress Status ==="
+    docker inspect opencode-agent \
+      --format '{{range .Config.Env}}{{println .}}{{end}}' \
+      | grep -iE '^(HTTP_PROXY|HTTPS_PROXY|ALL_PROXY)=' || true
+
+    echo
+    if [[ -f "$PROXY_CONFIG" ]]; then
+        jq -r '"EgressRegion: " + (if (.EgressRegion // "") == "" then "AUTO" else .EgressRegion end)' "$PROXY_CONFIG"
+    fi
+
+    echo
+    docker exec opencode-agent \
+      curl -fsS --max-time 15 https://ipinfo.io/json || true
+}
+
+switch_region() {
+    local region="${1:-}"
+    local name source expected_region
+
+    [[ -n "$region" ]] || {
+        echo "Usage: ./egress psiphon region <SG|DE|JP|US|ID>"
+        return 1
+    }
+
+    name="$(printf '%s' "$region" | tr '[:upper:]' '[:lower:]')"
+    source="$REGION_DIR/${name}.config"
+
+    [[ -f "$source" ]] || {
+        echo "Configuration not found: $source"
+        return 1
+    }
+
+    jq empty "$source" >/dev/null || {
+        echo "Invalid JSON: $source"
+        return 1
+    }
+
+    [[ -f "$PROXY_CONFIG" ]] || {
+        echo "Active Psiphon configuration not found: $PROXY_CONFIG"
+        return 1
+    }
+
+    if [[ ! -f "$BACKUP_CONFIG" ]]; then
+        cp "$PROXY_CONFIG" "$BACKUP_CONFIG"
+        chmod 600 "$BACKUP_CONFIG"
+    fi
+
+    expected_region="$(jq -r '.EgressRegion // ""' "$source")"
+
+    install -m 600 "$source" "${PROXY_CONFIG}.tmp"
+    mv "${PROXY_CONFIG}.tmp" "$PROXY_CONFIG"
+
+    set_env_file "./config/egress/psiphon.env"
+
+    echo "Selecting Psiphon region: ${expected_region:-AUTO}"
+
+    docker compose restart proxy
+    restart_agent
+
+    echo "Region configuration applied."
+}
+
+case "${1:-status}" in
+    psiphon)
+        case "${2:-}" in
+            region)
+                switch_region "${3:-}"
+                ;;
+            auto)
+                switch_region "auto"
+                ;;
+            *)
+                set_env_file "./config/egress/psiphon.env"
+                restart_agent
+                ;;
+        esac
+        ;;
+
+    direct)
+        set_env_file "./config/egress/direct.env"
+        restart_agent
+        ;;
+
+    status)
+        show_status
+        ;;
+
+    *)
+        echo "Usage:"
+        echo "  ./egress psiphon"
+        echo "  ./egress psiphon region <SG|DE|JP|US|ID>"
+        echo "  ./egress psiphon auto"
+        echo "  ./egress direct"
+        echo "  ./egress status"
+        exit 1
+        ;;
+esac

@@ -1,0 +1,41 @@
+services:
+  proxy:
+    build:
+      context: ./docker/proxy
+    image: opencode-lab/psiphon-proxy:local
+    container_name: opencode-proxy
+    restart: unless-stopped
+    volumes:
+      - ./config/psiphon:/config
+    expose:
+      - "8080"
+      - "1080"
+    networks:
+      - egress
+
+  agent:
+    build:
+      context: ./docker/agent
+    image: opencode-lab/agent:local
+    container_name: opencode-agent
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    working_dir: /workspace
+    env_file:
+      - ${EGRESS_ENV_FILE:-./config/egress/psiphon.env}
+    volumes:
+      - ./data:/workspace
+      - ./config/opencode:/home/agent/.config/opencode
+      - ./config/opencode-data:/home/agent/.local/share/opencode
+      # - /home/fikri/.config/opencode:/home/agent/.config/opencode
+      # - /home/fikri/.local/share/opencode:/home/agent/.local/share/opencode
+    depends_on:
+      - proxy
+    networks:
+      - egress
+    command: [ "opencode" ]
+
+networks:
+  egress:
+    driver: bridge
